@@ -1,12 +1,16 @@
 <template>
   <div id="app">
+    <div class="found-counter-later">{{ found }}\{{ brainParts.length }}</div>
     <div v-if="isClicked" class="question-card">
-      <div class="question-card__question">
-        {{ currentQuestion }}
+      <div class="question-card__inner">
+        <div class="question-card__inner__question">
+          {{ currentQuestion }}
+        </div>
+        <div @keydown.enter="checkAnswer" class="question-card__inner__answer">
+          <input v-model="userAnswer" type="text">
+        </div>
       </div>
-      <div @keydown.enter="checkAnswer" class="question-card__answer">
-        <input v-model="userAnswer" type="text">
-      </div>
+      <div v-if="checking && currentAnswer !== userAnswer" class="question-card__right-answer">{{ currentAnswer }}</div>
     </div>
     <svg id="mainSVG" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 185.5 179.5">
       <g id="a"/>
@@ -414,6 +418,7 @@
         </g>
       </g>
     </svg>
+    <div class="background-text">lateral</div>
   </div>
 </template>
 
@@ -447,12 +452,25 @@ export default {
       answerColor: "#e32d3f",
       answerLen: 0,
       rights: [],
-      wrongs: []
+      wrongs: [],
+      checking: false,
+      clicked: [],
+      found: 0
     }
   },
   mounted() {
     const HOVER_COLOR = "#ff757e"
     const CHOSEN_COLOR = "#e96e5b"
+    let innerHeight = window.innerHeight
+
+    window.addEventListener("scroll", function () {
+      let fromTop = document.documentElement.scrollTop
+      if (fromTop > innerHeight * 2) {
+        document.querySelector(".found-counter-later").style.visibility = "visible";
+      } else {
+        document.querySelector(".found-counter-later").style.visibility = "hidden";
+      }
+    })
 
     this.brainParts.forEach((part) => {
       console.log(part)
@@ -482,11 +500,17 @@ export default {
   },
   methods: {
     clickEvent(elem) {
+      if (!this.clicked.includes(elem)) {
+        this.clicked.push(elem);
+        this.found++;
+      }
+      this.checking = false
       this.isClicked = true
       this.currentQuestion = this.questionsArray[Math.floor(Math.random() * this.questionsArray.length)]
       this.currentAnswer = elem
     },
     checkAnswer() {
+      this.checking = true
       document.querySelector(".question-card").style.backgroundColor = this.answerColor;
       let curr = document.querySelectorAll(`.${this.currentAnswer}`)
       console.log(curr)
@@ -515,6 +539,49 @@ export default {
           item.classList.add("falseInput")
         })
       }
+    },
+    getDone() {
+      let rights = this.rights;
+      let wrongs = this.wrongs;
+      rights.forEach((right) => {
+        if (wrongs.includes(rights)) {
+          rights.splice(rights.indexOf(right))
+        }
+      })
+      this.brainParts.forEach((part) => {
+        if (!rights.includes(part) || !wrongs.includes(part)) {
+          wrongs.push(part)
+        }
+      })
+      this.$emit("done", {who: "lateral", wrongs: wrongs, rights: rights})
+    },
+    reset() {
+      this.brainParts = [
+        "temporalLobe",
+        "lateralSulcus",
+        "midTemporalGyrus",
+        "midbrain",
+        "frontalLobe",
+        "prefrontalLobe",
+        "wernix",
+        "broca",
+        "motorCortex",
+        "somatosensoryCortex",
+        "postcentralGyrus",
+        "preoccipitalNotch",
+        "centralSulcus",
+        "cerebellum",
+      ];
+      this.isClicked = false;
+      this.currentQuestion = null;
+      this.currentAnswer = null;
+      this.questionsArray = ["DE FAK IZ DIS", "NU FON WHO DIS", "Ha?", "What is this?"];
+      this.userAnswer = null;
+      this.answerStatus = null;
+      this.answerColor = "#e32d3f";
+      this.answerLen = 0;
+      this.rights = [];
+      this.wrongs = []
     }
   },
   watch: {
@@ -522,6 +589,7 @@ export default {
       handler() {
         if (this.answerLen !== this.userAnswer.length) {
           document.querySelector(".question-card").style.backgroundColor = "#FFE3DC";
+          this.checking = false
         }
         if (this.userAnswer.toLowerCase() === this.currentAnswer.toLowerCase()) {
           this.answerColor = "#b2fcbb"
@@ -554,6 +622,14 @@ body {
   height: 100vh;
 }
 
+.found-counter-later {
+  position: fixed;
+  font-family: Cy, sans-serif;
+  left: 20px;
+  top: 60px;
+  visibility: hidden;
+}
+
 #app {
   display: flex;
   flex-direction: row;
@@ -563,9 +639,10 @@ body {
 }
 
 .question-card {
+  display: flex;
+  flex-direction: column;
   margin-left: 80px;
   padding: 20px;
-  display: flex;
   height: 200px;
   width: 800px;
   background-color: #FFE3DC;
@@ -574,30 +651,43 @@ body {
   place-items: center;
   flex-grow: 1;
   justify-content: space-between;
+  place-content: center;
+  font-family: Cy, sans-serif;
 
-  &__question {
-    font-family: Cy, sans-serif;
-    font-size: 22px;
-    font-weight: 400;
-    flex-grow: 0;
-    margin-right: 20px;
+  &__right-answer {
+    place-items: center;
+    color: white;
   }
 
-  &__answer, input {
+  &__inner {
     display: flex;
-    flex-grow: 1;
-    background: transparent;
-    border: none;
-    box-shadow: 0 2px $color-outline;
-    font-family: Cy, sans-serif;
-    font-weight: 700;
-    font-size: 24px;
+    flex-direction: row;
+    place-items: center;
+    place-content: center;
 
+    &__question {
+      font-size: 22px;
+      font-weight: 400;
+      flex-grow: 0;
+      margin-right: 20px;
+    }
 
-    &:focus {
-      outline: none;
+    &__answer, input {
+      display: flex;
+      flex-grow: 1;
       background: transparent;
       border: none;
+      box-shadow: 0 2px $color-outline;
+      font-family: Cy, sans-serif;
+      font-weight: 700;
+      font-size: 24px;
+
+
+      &:focus {
+        outline: none;
+        background: transparent;
+        border: none;
+      }
     }
   }
 }
@@ -610,4 +700,18 @@ body {
 .falseInput {
   fill: #e32d3f;
 }
+
+.background-text {
+  width: 100%;
+  font-family: Cy, sans-serif;
+  font-size: 400px;
+  font-weight: 700;
+  position: absolute;
+  top: 200vh;
+  color: #f5f7fa;
+  z-index: -1;
+  display: flex;
+  justify-content: center;
+}
+
 </style>
