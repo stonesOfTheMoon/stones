@@ -1,20 +1,4 @@
 name: CHECK
-
-on:
-  push:
-    branches: [ master ]
-  pull-requests:
-    branches: [ master ]
-  workflow_dispatch:
-  
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-    - run: echo https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }} \
-
 on:
   pull_request
 
@@ -28,8 +12,8 @@ jobs:
     steps:
       - name: approve
         run: |
-          curl --request POST \ 
-          --url https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews \
+          curl --request POST \
+          --url https://api.github.com/repos/${{github.repository}}/pulls/${{github.event.number}}/reviews \
           --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
           --header 'content-type: application/json' \
-          -d '{"event": "APPROVE"}'
+          -d '{"event":"APPROVE"}'
